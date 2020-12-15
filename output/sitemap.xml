@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url>
+<loc>http://localhost:3000/rhs-build-course/index.html/template-tutorial/01-ansible-refactoring-overview.html</loc>
+<lastmod>2020-12-15T14:56:52.288Z</lastmod>
+</url>
+<url>
+<loc>http://localhost:3000/rhs-build-course/index.html/template-tutorial/02-ansible-refactoring-control-node.html</loc>
+<lastmod>2020-12-15T14:56:52.288Z</lastmod>
+</url>
+<url>
+<loc>http://localhost:3000/rhs-build-course/index.html/template-tutorial/03-ansible-refactoring-first-deploy.html</loc>
+<lastmod>2020-12-15T14:56:52.288Z</lastmod>
+</url>
+<url>
+<loc>http://localhost:3000/rhs-build-course/index.html/template-tutorial/04-ansible-refactoring-first-refactor.html</loc>
+<lastmod>2020-12-15T14:56:52.288Z</lastmod>
+</url>
+<url>
+<loc>http://localhost:3000/rhs-build-course/index.html/template-tutorial/05-ansible-refactoring-roles-part1.html</loc>
+<lastmod>2020-12-15T14:56:52.288Z</lastmod>
+</url>
+<url>
+<loc>http://localhost:3000/rhs-build-course/index.html/template-tutorial/index.html</loc>
+<lastmod>2020-12-15T14:56:52.288Z</lastmod>
+</url>
+</urlset>

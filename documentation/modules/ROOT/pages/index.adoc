@@ -1,20 +1,38 @@
-= Welcome to Template Tutorial
+= The Ansible Refactoring Lab
 :page-layout: home
 :!sectids:
 
 [.text-center.strong]
-== Publish Services to Kubernetes
+== An Introduction to Refactoring Ansible
 
-A Kubernetes tutorial to show how you can deploy a Java service to a Kubernetes cluster as it was a child game.
+An Ansible Refactoring Series - from Monolithic Playbook to Ansible Collections and Roles
 
 [.tiles.browse]
-== Browse modules
+== Browse the Labs
 
 [.tile]
-.xref:01-setup.adoc[Get Started]
-* xref:01-setup.adoc#minikube[Minikube]
+.xref:01-ansible-refactoring-overview.adoc[Overview]
+* xref:01-ansible-refactoring-overview.adoc#infrastucture[The Infrastucture]
+* xref:01-ansible-refactoring-overview.adoc#application[The Application]
 
 [.tile]
-.xref:02-deploy.adoc[Deploying]
-* xref:02-deploy.adoc#package[Package the Application]
-* xref:02-deploy.adoc#deploy[Deploy the Application]
+.xref:02-ansible-refactoring-control-node.adoc[Setting up your Control Node]
+* xref:02-ansible-refactoring-control-node.adoc#environment[Your Environment]
+* xref:02-ansible-refactoring-control-node.adoc#connect[Connect to your Control Node]
+* xref:02-ansible-refactoring-control-node.adoc#explore[Explore your Control Node]
+
+[.tile]
+.xref:03-ansible-refactoring-first-deploy.adoc[First Deploy]
+* xref:03-ansible-refactoring-first-deploy.adoc#deploy[Deploy]
+
+[.tile]
+.xref:04-ansible-refactoring-first-refactor.adoc[First Refactor]
+* xref:04-ansible-refactoring-first-refactor.adoc#approach[Approach]
+* xref:04-ansible-refactoring-first-refactor.adoc#variables[Refactor the Variables]
+* xref:04-ansible-refactoring-first-refactor.adoc#templates[Cleanup the Templates]
+
+[.tile]
+.xref:05-ansible-refactoring-roles-part1.adoc[Moving to Roles Part 1]
+* xref:05-ansible-refactoring-roles-part1.adoc#postgres2role[Convert Postgres Play to Role]
+* xref:05-ansible-refactoring-roles-part1.adoc#solution[Solution]
+

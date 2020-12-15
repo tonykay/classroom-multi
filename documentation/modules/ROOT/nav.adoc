@@ -1,7 +1,21 @@
-* xref:01-setup.adoc[1. Setup]
-** xref:01-setup.adoc#prerequisite[Prerequisites]
-** xref:01-setup.adoc#minikube[Setup Minikube]
+* xref:01-ansible-refactoring-overview.adoc[1. Overview]
+** xref:01-ansible-refactoring-overview.adoc#infrastucture[The Infrastucture]
+** xref:01-ansible-refactoring-overview.adoc#application[The Application]
 
-* xref:02-deploy.adoc[2. Deploy Service]
-** xref:02-deploy.adoc#package[Build Service]
-** xref:02-deploy.adoc#deploy[Deploy Dervice]
+* xref:02-ansible-refactoring-control-node.adoc[2. Setting up your Control Node]
+** xref:02-ansible-refactoring-control-node.adoc#environment[Your Environment]
+** xref:02-ansible-refactoring-control-node.adoc#connect[Connect to your Control Node]
+** xref:02-ansible-refactoring-control-node.adoc#explore[Explore your Control Node]
+
+* xref:03-ansible-refactoring-first-deploy.adoc[3. First Deploy]
+** xref:03-ansible-refactoring-first-deploy.adoc#deploy[Deploy]
+
+* xref:04-ansible-refactoring-first-refactor.adoc[4. First Refactor]
+** xref:04-ansible-refactoring-first-refactor.adoc#approach[Approach]
+** xref:04-ansible-refactoring-first-refactor.adoc#variables[Refactor the Variables]
+** xref:04-ansible-refactoring-first-refactor.adoc#templates[Cleanup the Templates]
+
+
+* xref:05-ansible-refactoring-roles-part1.adoc[5. Moving to Roles Part 1]
+** xref:05-ansible-refactoring-roles-part1.adoc#postgres2role[Convert Postgres Play to Role]
+** xref:05-ansible-refactoring-roles-part1.adoc#solution[Solution]

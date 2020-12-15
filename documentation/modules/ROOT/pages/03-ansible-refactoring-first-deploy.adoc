@@ -1,0 +1,267 @@
+== First Deploy
+
+
+Now your environment is setup and customized it is time to clone, examine, and run your project repository or _repo_.
+
+
+=== Simple Multi-Tier Application Overview
+
+The repo contains a simple, monolithic, playbook `main.yml` that deploys a multi-tier application serving both a web site and it's associated API.
+
+The Application comprises 3 main components, or tiers, which can be deployed onto the lab infrastructure. 
+There is also a control node to work from.
+
+[%header,cols="3,3,2,2,3,5"] 
+|===
+|Server
+|Role
+|Ports (TCP)
+|Software 
+|Ansible Group
+|Purpose
+
+| `control`
+| Control Node
+| 22
+| Ansible
+| *NA*
+| Ansible Control Node
+
+| `frontend1`
+| Load Balancer
+| 22, 80, 443
+| HAProxy 
+|`load_balancers`
+| Load balances across App Tier
+
+| `app1`, `app2`
+| Application Servers
+| 22, 8080
+| Python Flask
+| `app_servers`
+| Webserver and API (Python/Flask)
+
+| `appdb1`
+| Database Server
+| 22, 5432
+| Postgresql
+| `database_servers`
+| Back end database for Flask application
+
+|===
+
+image::/images/ntier-app-topology.png[role="thumb center" width=100%]
+
+[#deploy]
+== First Deploy
+
+In the first deploy we will just deploy the repo, or project, _"as is"_ without making any changes.
+
+. Clone the deployer git repo
++
+
+NOTE: If you are not on your `control` node as the `devops` service account user return to link:/post/ansible-refactoring-series-part1[Setting up your Control Node]
+
++
+[source,sh]
+----
+git clone https://github.com/tonykay/ansible_flask_app_loader_all_in_one.git
+----
++
+.Sample Output
+[source,texinfo]
+----
+Cloning into 'ansible_flask_app_loader_all_in_one'...
+remote: Enumerating objects: 41, done.
+remote: Counting objects: 100% (41/41), done.
+remote: Compressing objects: 100% (25/25), done.
+remote: Total 41 (delta 16), reused 40 (delta 15), pack-reused 0
+Unpacking objects: 100% (41/41), done.
+----
+
+. Change directory into you project
+
++
+[source,sh]
+----
+cd ansible_flask_app_loader_all_in_one
+----
++
+
+Your starting point is a publicly accessible `git` repository, in this case hosted at link:https://github.com/tonykay/ansible_flask_app_loader_all_in_one.git[github]. 
+As previously noted it contains a working, but monolithic, deployment playbook `main.yml` containing 3 plays which deploy the above application.
+As a convenience for testing and developing a second playbook, `teardown.yml` is also provided to delete the application *fully*.
++
+
+[NOTE]
+====
+In Ansible plays, modules, roles, etc., should ideally do one thing well rather than attempt to be too _broad_.
+In our lab repository the primary playbook `main.yml` is comprised of several, functional plays but it's monolithic nature makes it:
+
+* Inflexible - e.g. it is difficult to re-use the database/postgres play on another project
+* Poor "separation of concerns" - DevOps teams all working with a single file dealing with different technology areas
+* Mixes configuration and code - variables, which may need frequent updating, are embedded in the plays themselves 
+====
+
+. Explore the project
++
+This project, currently, has a very flat structure and can be explored simply with the `ls` command. 
+For much larger projects `tree` is a useful command, particularly with the `-L` command that can be used to limit the directory depth of output. We will use `tree` later.
++
+
+Notice the `ansible.cfg` file.
+Whilst executing `ansible` commands from this directory this takes priority over the default `/etc/ansible/cfg`. You can confirm this with `ansible --version`
+
+. Examine your `ansible.cfg`
++
+
+The `ansible --version` command can identify the location of the link:https://docs.ansible.com/ansible/latest/reference_appendices/config.html[`ansible.cfg`] in use. 
++
+[source,sh]
+----
+cat ansible.cfg
+----
++
+.Sample Output
+[source,bash]
+----
+[defaults]
+# inventory                   = hosts                       <1>
+retry_files_enabled         = false
+
+stdout_callback             = default
+bin_ansible_callbacks       = true
+callback_whitelist          = yaml, timer, profile_tasks
+
+[ssh_connection]
+# ssh_args                    = -F ./ssh.cfg                <2>
+----
++
+
+[NOTE]
+====
+Whilst your repository includes both an *inventory* file and a custom `ssh.cfg` file, both are commented out *1* and *2* above and `ansible` will use the default inventory (`/etc/ansible/hosts`) and `ssh` configuration from `inventory` variables *and* at a lower precedence `~/.ssh/config
+====
+
+. View the `main.yml`
++
+Take your time and page through the `main.yml` noting the multiple plays and their purpose.
+The application is actually deployed _backwards_, which is not uncommon, as each layer requires the services of the layer  
++
+
+[source,sh]
+----
+less main.yml
+----
+
+== Deploy the Application
+
+. Run the `main.yml` playbook
++
+
+You are now ready to run the playbook and check if it works as expected.
+Watch the `ansible-playbook` command's output to follow, and understand, its progress.
++
+
+[source,sh]
+----
+ansible-playbook main.yml
+----
++
+.Sample Output
+[source,texinfo]
+----
+...
+
+PLAY RECAP *************************************************************************************************************
+app1.ntier-infra-03.internal : ok=10   changed=9    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+app2.ntier-infra-03.internal : ok=9    changed=8    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+appdb1.ntier-infra-03.internal : ok=9    changed=8    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0  
+frontend1.ntier-infra-03.internal : ok=4    changed=4    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+Tuesday 21 July 2020  19:34:40 +0000 (0:00:00.770)       0:01:18.717 **********
+===============================================================================
+Install flask packages ----------------------------------------------------------------------------------------- 36.30s
+Install Postgres packages -------------------------------------------------------------------------------------- 15.33s
+
+...
+----
+
+. Run it again!
++
+It is good to validate that the playbook is idempotent and can safely be run multiple times without breaking the installation
+
+== Test your Application is Deployed Correctly
+
+Assuming you got a sucessful playbook run you should now validate the deployment.
+There are a number of tests you can potentially carry out as each server is running at least 1 service:
+
+* `frontend1`: http on port 80
+* `app1` and `app2`: a website/API endpoint on port 8080
+* appdb1: Postgres on port 5432
+
+The simplest tests are to call the API endpoint with `curl` and to browse, from your local machine to the website.
+
+. `curl` the HAProxy Load Balancer (the `-s` option for `silent` stops curl from outputting stats to *STDERR*)
++
+[source,sh]
+----
+curl -s frontend1:/api/v1/resources
+----
++
+.Sample Output
+[source,texinfo]
+----
+
+  {
+    "author": "That Jeff Geerlinguy",
+    "description": "Classic introduction to Ansible",
+    "id": 1,
+    "name": "Ansible for DevOps",
+    "source": "Book",
+    "url": "https://leanpub.com/ansible-for-devops"
+  },
+  {
+    "author": "James Freeman, Jesse Keating",
+    "description": "Explores how Ansible works",
+    "id": 2,
+    "name": "Mastering Ansible 3rd Edition",
+    "source": "Book",
+    "url": "https://www.packtpub.com/virtualization-and-cloud/mastering-ansible-third-edition`"
+  },
+
+... <TRUNCATED OUTPUT>
+----
++
+NOTE: Your `curl` command called the *HAProxy* Load balancer which in turned called one of the App Servers.
+The *Flask* application in turn connected to the *Postgreql* database running on `appdb1`
++
+
+To confirm *external* connectivity redo the `curl` command with the Fully Qualified Domain Name (FQDN)
++
+TIP: You can always find your `GUID` with the `hostname` command - it will be the left most sub-domain.
+e.g. `fe87` in this output `control.fe87.internal`
++
+
+[source,sh]
+----
+curl -s http://frontend1.<GUID>.example.opentlc.com/api/v1/resources
+----
++
+
+Expect to see the same JSON output as from the prior `curl`
+
+. Browse to http://frontend1.<GUID>.example.opentlc.com/resources *NB* this is the webpage and omits the `/api/v1` from the URL.
+You should see something similar to this
++
+
+image::/images/ntier-app-browser.png[role="thumb center" width=100%]
+
+. Test the `teardown.yml` playbook and remove the application.
++
+
+Again it is worth watching the output closely and seeing if there are any expected, or unexpected, messages or changes.
+As before feel free to run it twice, note how the output changes as the idempotent teardown has nothing to do on the 2nd pass.
+In fact you should expect to see `changed=0` in the output of the second pass for all hosts. 
+
+

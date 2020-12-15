@@ -1,0 +1,240 @@
+== Roles Refactor
+
+In our second pass through the project we will take the now more modular solution a step further and break it into roles. 
+In this case we will basically map each of the 3 playbooks from Part 3 into 1 role each
+
+.Process
+. Create a new branch refactor-pass-02-roles
+. Create a roles sub-directory in the repo
+. Create each role
+.. Copy the tasks from your playbook into the roles `tasks/main.yml`
+.. Consider moving some/all vars into the roles `defaults/main.yml` or `vars/main.yml`
+
+[#postgres2role]
+=== Turning the Postgres Play into a Role
+
+We will start here and document the steps for our first role. The remainimg 2 roles for `flask` and `HAProxy` will basically repeat the same pattern.
+
+. Create a new branch `refactor-pass-02-roles`
+
++
+[source,sh]
+----
+git checkout -b refactor-pass-02-roles
+----
++
+.Sample Output
+[source,texinfo]
+----
+Switched to a new branch 'refactor-pass-02-roles'
+----
+
+. Make a roles sub-directory
+
++
+[source,sh]
+----
+mkdir roles
+----
+
+. Use `ansible-galaxy` to create the _skeleton_ for the `postgres` role
+
++
+[source,sh]
+----
+ansible-galaxy init roles/postgres
+----
++
+.Sample Output
+[source,texinfo]
+----
+- Role roles/postgres was created successfully
+----
++
+
+[TIP]
+====
+The `tree` command, not always installed, is useful to visualize directory structures.
+Try this, `sudo yum install tree -y` then `tree roles` to see your role:
+
+.Sample Output
+[source,texinfo]
+----
+roles
+└── postgres
+    ├── defaults
+    │   └── main.yml
+    ├── files
+    ├── handlers
+    │   └── main.yml
+    ├── meta
+    │   └── main.yml
+    ├── README.md
+    ├── tasks
+    │   └── main.yml
+    ├── templates
+    ├── tests
+    │   ├── inventory
+    │   └── test.yml
+    └── vars
+        └── main.yml
+----
+====
+
+. Start by creating your roles `tasks/main.yml`
++
+
+The easiest starting place is to copy your provision_database_tier.yml into the roles `tasks/main.yml`.
++
+
+[source,sh]
+----
+cp provision_database_tier.yml roles/postgres/tasks/main.yml 
+----
++
+
+. Now edit and fix the `tasks/main.yml`
++
+
+Delete everything except the tasks themselves, no need for to keep the `tasks:` directive and fix the indentation by moving everything left (`vim` is extremely good for this with commands like `<<` and _n_`<<` where _n_ is the count operator. eg `5<<` outdents 5 lines)
++
+
+[NOTE]
+====
+Don't forget to delete the `handler` section at the bottom of the play.
+====
++
+
+Your top 10 lines should now look like this:
++
+
+[source,sh]
+----
+head roles/postgres/tasks/main.yml 
+----
++
+
+.Sample Output
+[source,texinfo]
+----
+---
+- name: Install Postgres packages
+  package:
+    name: "{{ __package }}"
+    state: present
+  loop: 
+    - "{{ postgres_rhel7_repo }}"        
+    - "{{ postgres_packages }}"
+    - "{{ postgres_library }}"
+  loop_control:
+----
+
+. Now repeat a similar process to steps 4 and 5 above except this time with the roles `handlers/main.yml`
++
+
+Once you have finished your `roles/postgres/handlers.yml` should look like this:
++
+
+[source,sh]
+----
+---
+- name: restart_postgres
+  service:
+    name: "{{ postgres_service }}"
+    state: restarted
+----
+
+. Roles have in-built support for templates and your postgres *playbook* referenced `templates/pg_hba.conf.j2`
+.. Move your `templates/pg_hba.conf.j2` to `roles/postgres/templates/`
+.. Update your `roles/postgres/tasks/main.yml` to *remove* the path to the `pg_hba.conf.j2` template as the role knows _"where to look"_
++
+Your roles `template` task in `roles/postgres/tasks/main.yml` should now look like this 
++
+[source,sh]
+----
+- name: Setup Postgres for remote password auth
+  template:
+    src: pg_hba.conf.j2
+    dest: "{{ postgres_10_data_dir }}/pg_hba.conf"
+  notify: restart_postgres
+----
+
+. Update your `provision_database_tier.yml` playbook to use the role `postgres` and delete the old `tasks` and `handlers` code
++
+Your `provision_database_tier.yml` should look like this:
++
+[source,sh]
+----
+---
+- name: Deploy, configure, and populate Postgres 10
+  hosts: database_servers
+  become: true
+  gather_facts: false
+  tags:
+    - database_servers
+
+  roles:
+  
+    - postgres
+----
+
+. Finally test your new role by running the `provision_database_tier.yml` either directly or via `site.yml`
++
+
+You mean want to delete your application first via `ansible-playbook teardown-app.yml`
++
+
+*Success* (hopefully) 
++
+If not debug your issues until you can successfully deploy and configure Postgres by your role.
+
+. Commit your changes
++
+[source,sh]
+----
+git add roles
+git commit -am "Moved postgres playbook to use new postgres role"
+----
++
+. Push your changes to your repo
++
+If you have set up your own fork `git push`
++
+[NOTE]
+====
+`git` may ask you to perform some adminstrative commands and if it is your first push on this branch `git push --set-upstream origin refactor-pass-02-roles`
+====
+
+=== Repeat the above Process for your remaining playbooks
+
+Once you have converted both `provision_app_tier.yml` and `provision_load_balancer_tier.yml` to roles based playbooks re-run the whole deploy end to end
+
+[source,sh]
+----
+ansible-playbook teardown-app.yml
+ansible-playbook site.yml
+----
+
+[#solution]
+=== Solution
+
+One possible solution can be seen here in the solution `refactor-pass-02-roles` branch, either:
+
+. Browse to the link:https://github.com/tonykay/solution_ansible_flask_app_loader_all_in_one/tree/refactor-pass-02-roles[`refactor-pass-02-roles` branch]
+. Download the solution and checkout the `refactor-pass-02-roles` branch
++
+[source,sh]
+----
+git clone https://github.com/tonykay/solution_ansible_flask_app_loader_all_in_one
+cd solution_ansible_flask_app_loader_all_in_on 
+git checkout refactor-pass-02-roles 
+----
+
+== Next Steps
+
+Unfortunately your roles, whilst working, are not complete.
+At this point they cannot be used _standalone_ as they lack the necessary variables which are all being acquired through your `group_vars`. 
+In the next lab we will look at what variables belong inside the roles, and where, and what variables should remain external.
+Then we will also clean up your roles, removing redundant files etc.
+
+In Part 5 we will continue to work with `roles` and enhance them to be re-usable across multiple projects with _sensible_ default behavior _"out of the box"_.

@@ -1,0 +1,355 @@
+== Getting Started
+
+To follow along I assume you have access to a lab environment suitable for the task. I will add, July 2020, a `Vagrantfile` to simplify running this locally on your laptop. 
+Meanwhile this can be deployed via the brand new link:https://github.com/redhat-cop/agnosticd/tree/development/ansible/configs/ansible-multitier-infra[Ansible Multitier Infra Config] assuming you have AWS credentials or OpenStack.
+[source,sh]
+----
+ansible-playbook main.yml -e @configs/ansible-multitier-infra/sample_vars_ec2.yml -e @~/secrets/aws-gpte.yml -e guid=refactor
+----
+
+For Red Hatters and Partners this is available via CloudForms at link:https://labs.opentlc.com/[OpenTLC Catalogs] as *OPENTLC
+Automation -> Ansible Advanced NG - Multi Tier Babylon*
+You will receive 3 emails during the provisioning process, the last of which will contain your `ssh` login details.
+
+[#environment]
+=== Your Environment
+
+The lab environment consists of four servers and a control node.
+
+image::/images/
+-topology.png[role="thumb center" width=80%]
+
+[%header,cols="3,3,2,2,3,5"] 
+|===
+|Server
+|Role
+|Ports (TCP)
+|Software 
+|Ansible Group
+|Purpose
+
+| `control`
+| Control Node
+| 22
+| Ansible
+| *NA*
+| Ansible Control Node
+
+| `frontend1`
+| Load Balancer
+| 22, 80, 443
+| HAProxy 
+|`load_balancers`
+| Load balances across App Tier
+
+| `app1`, `app2`
+| Application Servers
+| 22, 8080
+| Python Flask
+| `app_servers`
+| Webserver and API (Python/Flask)
+
+| `appdb1`
+| Database Server
+| 22, 5432
+| Postgresql
+| `database_servers`
+| Back end database for Flask application
+
+|===
+
+NOTE: Only `control` and `frontend1` are exposed to the Internet
+
+All nodes, today, run Red Hat Enterprise Linux 7.7 though CentOS 7.7 could be used in a homelab situation.
+At this point, the machines do not have their respective payloads installed or configured but are setup for `ssh` access.
+
+
+You will work, and run, Ansible from the Ansible Control Node `control`.
+
+=== Optional (if using password based ssh)
+
+The new labs we are deploying with AgnostiCD have evolved to using randomly generated `ssh` passwords over keys.
+However if you are like me and want to avoid the hassle of managing passwords I recommend injecting your own `ssh` *public* key.
+
+. Inject your own `ssh` key
++
+[source,sh]
+----
+laptop $ ssh-copy-id -i <PATH-TO-PUBLIC-KEY> <YOUR-REMOTE-USER>@control.<GUID>.example.opentlc.com
+----
++
+.Example - Customize the above command as necessary
+
+[source,sh]
+----
+laptop $ ssh-copy-id -i ~/.ssh/id_rsa.pub tok@control.3tier-01.example.opentlc.com
+----
++
+.Sample Output
+[source,sh]
+----
+ssh-copy-id -i ~/.ssh/id_rsa.pub tok@control.ntier-infra-01.example.opentlc.com
+/usr/bin/ssh-copy-id: INFO: Source of key(s) to be installed: "/Users/tok/.ssh/id_rsa.pub"
+/usr/bin/ssh-copy-id: INFO: attempting to log in with the new key(s), to filter out any that are already installed
+/usr/bin/ssh-copy-id: INFO: 1 key(s) remain to be installed -- if you are prompted now it is to install the new keys
+tok@control.ntier-infra-01.example.opentlc.coms password:
+
+Number of key(s) added:        1
+
+Now try logging into the machine, with:   "ssh 'tok@control.ntier-infra-01.example.opentlc.com'"
+and check to make sure that only the key(s) you wanted were added.
+
+----
++
+
+Now try logging into the machine, with:   "ssh 'tok@control.ntier-infra-01.example.opentlc.com'"
+and check to make sure that only the key(s) you wanted were added.
+
+[#connect]
+=== Connect to your control node
+
+. `ssh` either with your username/password or key
++
+[source,sh]
+----
+ laptop $ ssh <YOUR-REMOTE-USER>@control.<GUID>.example.opentlc.com # optional -i <PATH-TO-PUBLIC-KEY>
+----
+
++
+NOTE: You can simplify your `ssh` setup by editing your local, laptop, `~/.ssh/config` file. 
+This would allow you to simply `ssh control` using whatever alias makes sense for the `HOST` line below.
+For example
++
+[source,sh]
+----
+Host control
+  HostName control.foo.example.opentlc.com
+  User <MY-REMOTE-USER-NAME>
+  IdentityFile ~/.ssh/<MY-REMOTE-USER-KEY>
+  StrictHostKeyChecking no
+----
++
+. Switch, via the `sudo` command, to your ansible *service account* `devops`
++
+NOTE: This is a common pattern on *control nodes* where you login as yourself and then switch to the service account to perform ansible and other management tasks.
+It is a *poor*, and risky practice, to work as `root`.
+It would also be possible to add yourself the `devops` users `~/.ssh/authorized_keys`, again this is a poor practice
++
+[source,sh]
+----
+sudo su - devops
+----
+
+[#explore]
+== Explore your environment
+
+. Check your basic toolchain is in place. At a minimum you will need `ansible` and `git`
+
++
+[source,sh]
+----
+type git ansible
+----
++
+.Sample Output
+[source,texinfo]
+----
+git is /bin/git
+ansible is /bin/ansible
+----
+
+. Install any preferred additional tools, utilities, and configuration you like to have
++
+
+If you expect to spend any significant amount of time working on a host it is recommended to spend a few moments customizing your working environment. Possible steps can include:
+
+* Customize your `~/.bashrc` or equivalent
+* Customize your `~/.vimrc` or equivalent
+* Installs useful and/or favorite tools e.g.:
+** vim/emacs/nano
+** curl
+** telnet # useful for debugging services
+** jq     # if you expect to be working with JSON etc
+** tree
+* Other environment optimizations
+
+[TIP] 
+====
+Whilst typically not widely used here is a use-case for the `ansible-pull` command that allows you to pull in an external playbook and execute it. For example create a playbook in a git repo that customizes a typical Linux environment, installs favorite/useful packages and customizes key files such as `~/.bashrc` and (for me) `~/.zshrc`
+[source,sh]
+----
+ansible-pull -U https://github.com/tonykay/frank.git main.yml -i localhost,
+----
+====
+
+Now your toolchain is in place and optimized move on to exploring your `ansible` setup.
+
+=== Check your `ansible` configuration and Setup
+
+Typical tasks working with a new, or unfamiliar, control node
+
+* Check ansible version
+* Identify, and examine, your `ansible.cfg`
+* Explore your inventory
+* Verify your `ssh` setup and configuration
+
+. Check `ansible` version
++
+[source,sh]
+----
+ansible --version
+----
++
+
+.Sample Output
+[source,texinfo]
+----
+ansible 2.9.10
+  config file = /etc/ansible/ansible.cfg
+  configured module search path = [u'/home/devops/.ansible/plugins/modules', u'/usr/share/ansible/plugins/modules']
+  ansible python module location = /usr/lib/python2.7/site-packages/ansible
+  executable location = /bin/ansible
+  python version = 2.7.5 (default, Sep 26 2019, 13:23:47) [GCC 4.8.5 20150623 (Red Hat 4.8.5-39)]
+
+----
++
+. Explore your *inventory*
++
+
+[source,sh]
+----
+cat /etc/ansible/hosts
+----
++
+.Sample Output
+[source,texinfo]
+----
+[load_balancers]
+frontend1.ntier-infra-01.internal
+
+[app_servers]
+app2.ntier-infra-01.internal
+app1.ntier-infra-01.internal
+
+[database_servers]
+appdb1.ntier-infra-01.internal
+
+[ntierapp:children]
+load_balancers
+app_servers
+database_servers
+
+[ntierapp:vars]
+timeout=60
+ansible_user=ec2-user
+ansible_ssh_private_key_file="~/.ssh/ntier-infra-01key.pem"
+ansible_ssh_common_args="-o StrictHostKeyChecking=no"
+----
++
+[TIP]
+====
+`ansible-inventory` is a useful utility for exploring, and visualizing, your inventory. 
+
+.`ansible-inventory` options
+[%header%footer%autowidth]
+|===
+| Option | Function
+| `--graph` | Create an inventory graph, also `--graph <GROUP>` option
+| `--vars`  | Adds vars to `--graph` output *only*
+| `--host`  | Specific host
+| `-i`      | Alternative inventory source
+|===
+
+[source,sh]
+----
+ansible-inventory --graph --vars
+----
+
+.Sample Output
+[source,texinfo]
+----
+@all:
+  |--@ntierapp:
+  |  |--@app_servers:
+  |  |  |--app1.ntier-infra-01.internal
+  |  |  |  |--{ansible_ssh_common_args = -o StrictHostKeyChecking=no}
+  |  |  |  |--{ansible_ssh_private_key_file = ~/.ssh/ntier-infra-01key.pem}
+  |  |  |  |--{ansible_user = ec2-user}
+  |  |  |  |--{timeout = 60}
+  |  |  |--app2.ntier-infra-01.internal
+  |  |  |  |--{ansible_ssh_common_args = -o StrictHostKeyChecking=no}
+  |  |  |  |--{ansible_ssh_private_key_file = ~/.ssh/ntier-infra-01key.pem}
+  |  |  |  |--{ansible_user = ec2-user}
+  |  |  |  |--{timeout = 60}
+  |  |--@database_servers:
+  |  |  |--appdb1.ntier-infra-01.internal
+  |  |  |  |--{ansible_ssh_common_args = -o StrictHostKeyChecking=no}
+  |  |  |  |--{ansible_ssh_private_key_file = ~/.ssh/ntier-infra-01key.pem}
+  |  |  |  |--{ansible_user = ec2-user}
+  |  |  |  |--{timeout = 60}
+  |  |--@load_balancers:
+  |  |  |--frontend1.ntier-infra-01.internal
+  |  |  |  |--{ansible_ssh_common_args = -o StrictHostKeyChecking=no}
+  |  |  |  |--{ansible_ssh_private_key_file = ~/.ssh/ntier-infra-01key.pem}
+  |  |  |  |--{ansible_user = ec2-user}
+  |  |  |  |--{timeout = 60}
+  |  |--{ansible_ssh_common_args = -o StrictHostKeyChecking=no}
+  |  |--{ansible_ssh_private_key_file = ~/.ssh/ntier-infra-01key.pem}
+  |  |--{ansible_user = ec2-user}
+  |  |--{timeout = 60}
+  |--@ungrouped:
+----
+====
++
+NOTE: You can also list your inventory groups hosts with the `ansible` command `ansible <GROUP_NAME> --list-hosts` e.g. `ansible all --list-hosts`
+The `-i` option allows you to specify an alternative inventory including a directory or dynamic inventory script or plugin.
+
+. Finally verify basic `ssh` connectivity to show that your `ssh` configuration is valid and all necessary users, and keys are setup.
++
+[source,sh]
+----
+ansible all -m ping
+----
++
+.Sample Output
+[source,texinfo]
+----
+Sunday 19 July 2020  12:20:13 +0000 (0:00:00.054)       0:00:00.054 ***********
+frontend1.3tier-01.internal | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python"
+    },
+    "changed": false,
+    "ping": "pong"
+}
+app2.3tier-01.internal | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python"
+    },
+    "changed": false,
+    "ping": "pong"
+}
+appdb1.3tier-01.internal | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python"
+    },
+    "changed": false,
+    "ping": "pong"
+}
+app1.3tier-01.internal | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python"
+    },
+    "changed": false,
+    "ping": "pong"
+}
+Sunday 19 July 2020  12:20:14 +0000 (0:00:01.069)       0:00:01.124 ***********
+===============================================================================
+ping -------------------------------------------------------------------------------------------------------------------------------------------------------------------- 1.07s
+Playbook run took 0 days, 0 hours, 0 minutes, 1 seconds
+----
+
+=== Next Steps
+
+Now your environment is fully configured and ready to run. Move onto link:/post/ansible-refactoring-series-part2[Part 2: First Deploy]
+

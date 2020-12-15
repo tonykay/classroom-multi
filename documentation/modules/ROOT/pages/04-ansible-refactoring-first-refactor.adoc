@@ -1,0 +1,518 @@
+== First Refactor
+
+
+In our first pass through the project we will just focus on breaking it up into more modular components, breaking apart the variables from the code, and cleaning up the base directory by moving out any files or templates into sub-directories.
+If you are link:https://www.jeffgeerling.com/[Jeff Geerling] and very comfortable with writing *roles* and *collections* then this part can be skipped!
+
+
+.Process
+. Break `main.yml` into 3 purpose based playbooks
+. Create a `site.yml` wrapper to allow a full deploy with 1 run of `ansible-playbook`
+. Break out the variables into separate files
+. Clean up the project directory
+.. Move any templates into a `./templates` directory *and* update playbooks
+.. Move any files (e.g. used by `copy` module or similar) into a `./files` directory *and* update playbooks
+
+[#approach]
+=== Refactor Approach
+
+. Make a refactor `git` branch
++
+
+Even if you don't use `git` or other SCM (Source Code Management) tool it is a very good place to start.
+This will give you safety, and confidence, to make major changes with little to no risk.
+We'll introduce basic git commands as we go along.
++
+
+[source,sh]
+----
+git checkout -b refactor-pass-01
+----
++
+.Sample Output
+[source,texinfo]
+----
+Switched to a new branch 'refactor-pass-01'
+----
++
+
+[source,sh]
+----
+cp main.yml provision_database_tier.yml
+cp main.yml provision_app_tier.yml
+cp main.yml provision_load_balancer_tier.yml
+----
+
+. Edit each file so it contains only the appropriate play
++
+
+Using the editor of your choice, `vim` is installed, delete the redundant extra plays from each of your new files.
+Your objective is to have 3 focussed playbooks which do 1 tier each.
++
+
+You can verify you haven't introduced syntax errors by checking with `ansible-playbook --syntax-check`
++
+[source,sh]
+----
+ansible-playbook --syntax-check *.yml
+
+----
++
+.Sample Output
+[source,texinfo]
+----
+playbook: main.yml
+playbook: provision_app_tier.yml
+playbook: provision_database_tier.yml
+playbook: provision_load_balancer_tier.yml
+playbook: teardown-app.yml
+
+----
++
+
+[NOTE]
+====
+Linters such as `yamllint`, `ansible-lint`, and `ansible-review` are outside the scope of this particular stage
+If you are curious to try then install `python3` and the use `pip3` to install `ansible-review`
+[source,sh]
+----
+sudo yum install python3 -y
+sudo pip3 install ansible-review
+----
+
+Output omitted for brevity and *yes* using `sudo` for `pip3` is a bad practice but a useful shortcut for now (use virtualenvs or link to `/usr/local/bin` would be better but a few more steps) 
+
+.Try it on your new playbooks
+[source,texinfo]
+----
+ansible-review provision*.yml
+----
+.Sample Output
+[source,texinfo]
+----
+WARN: Best practice "Playbooks should not contain logic (vars, tasks, handlers)" not met:
+provision_database_tier.yml:2: [EXTRA0008] tasks should not be required in a play
+WARN: Best practice "Playbooks should not contain logic (vars, tasks, handlers)" not met:
+....
+----
+
+Lots of *warnings* but no *errors* - lets return to those warnings later.
+====
+
+. Wrap your 3 playbooks in a `site.yml` using `import_playbook`
++
+[source,sh]
+----
+cat site.yml
+----
++
+.Sample Output
+[source,texinfo]
+----
+- import_playbook: provision_database_tier.yml
+- import_playbook: provision_app_tier.yml
+- import_playbook: provision_load_balancer_tier.yml
+----
+
+. Verify your new `site.yml` (if necessary run `ansible-playbook teardown.yml` first to delete the install)
+
++
+[source,sh]
+----
+ansible-playbook site.yml
+----
+
+*Success* (hopefully) - now cleanup and move on to the next stage
+
+== A `git` Digression
+
+Now we have made some changes, added some files/playbooks, amd `main.yml` is redundant it would be nice to snapshot our progress in `git`.
+This allows us to move forward confidently, and yet revert or recover back to  a known good state
+
+. Configure some `git` global variables
++
+Feel free to use whatever values you want below
+
++
+[source,sh]
+----
+git config --global user.email "tok@example.com"
+git config --global user.name "tok"
+git config -l
+----
++
+.Sample Output
+[source,texinfo]
+----
+user.email=tok@example.com                <1>
+user.name=tok                             <2>
+core.repositoryformatversion=0
+core.filemode=true
+core.bare=false
+core.logallrefupdates=true
+remote.origin.url=https://github.com/tonykay/ansible_flask_app_loader_all_in_one.git
+remote.origin.fetch=+refs/heads/*:refs/remotes/origin/*
+branch.main.remote=origin
+branch.main.merge=refs/heads/main
+----
++
+Your changes have been applied
++
+1. Your email
+2. Your name
+
+. Now cleanup your repo and commit your changes
+
++
+[source,sh]
+----
+git rm main.yml
+git add --all
+git commit -m "Refactored and removed main.yml to site.yml"
+----
++
+.Sample Output
+[source,texinfo]
+----
+[refactor-pass-01 a61fb5c] Refactored and removed main.yml to site.yml
+ 5 files changed, 300 insertions(+), 296 deletions(-)
+ delete mode 100644 main.yml
+ create mode 100644 provision_app_tier.yml
+ create mode 100644 provision_database_tier.yml
+ create mode 100644 provision_load_balancer_tier.yml
+ create mode 100644 site.yml
+----
++
+TIP: You can check on your changes and state with `git status` and view the commit history with `git log`
+
+[#variables]
+== Refactoring the Variables
+
+It is, generally, a bad practice to store code and configuration together, and your 3 playbooks are full of variables.
+Variables, or _vars_, can change frequently and being able to modify these or supply alternatives simply is very powerful.
+In a mature codebase the playbooks, roles, and collections may become predominately *read-only* in day to day use with the var or inputs changing far more frequently.
+
+. Break each set of vars out into separate _"var files"_.
++
+There are a number of places we could put them and many ways we can read them back into our playbooks.
+However in this case the simplest and easiest option is to move them into files in a `group_vars` directory.
+Each file will take the name of its `group` postfixed by `.yml` and Ansible will automatically include it at run time.
++
+.. make the `group_vars` directory
++
+[source,sh]
+----
+mkdir group_vars
+----
++
+
+.. Remind yourself of your `group` names
++
+
+[source,sh]
+----
+ansible-inventory --graph
+----
++
+.Sample Output
+[source,texinfo]
+----
+@all:
+  |--@app_servers:
+  |  |--app1.fe87.internal
+  |  |--app2.fe87.internal
+  |--@database_servers:
+  |  |--appdb1.fe87.internal
+  |--@load_balancers:
+  |  |--frontend1.fe87.internal
+  |--@ungrouped:
+----
++
+.. Copy your playbooks into `group_vars` using the `group` names above postfixed with `.yml`
++
+[source,sh]
+----
+cp provision_database_tier.yml group_vars/database_servers.yml
+cp provision_app_tier.yml group_vars/app_servers.yml
+cp provision_load_balancer_tier.yml group_vars/load_balancers.yml
+----
++
+
+.. Cleanup each new variable file
++
+
+* Delete *all* non variable lines including `vars:`
+* Fix the indentation, aligning the vars with column 1
++
+[TIP]
+====
+`vim` is extremely good at these types of operations
+
+.`vim command mode` options
+[%header%footer%autowidth]
+|===
+| Command | Function
+
+| `ndd` 
+| Delete _n_ lines (`ex` mode is even more powerful)
+
+| `n<<` 
+| allows you to change indentation levels over _n_ multiple lines
+|===
+====
++
+
+For example your files should look like this:
++
+[source,sh]
+----
+head group_vars/database_servers.yml
+----
++
+.Sample Output
+[source,texinfo]
+----
+postgres_rhel7_repo: "https://download.postgresql.org/pub/repos/yum/10/redhat/rhel-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
+postgres_packages:
+  - postgresql10 
+  - postgresql10-server 
+  - postgresql10-contrib 
+  - postgresql10-libs
+postgres_library: python-psycopg2
+postgres_10_data_dir: /var/lib/pgsql/10/data
+postgres_10_bin_path: /usr/pgsql-10/bin
+----
+
+.. Now remove the vars from each of your playbooks 
++
+
+Edit each playbook removing the `vars:` section completely
+
+. Test your changes remembering to run `ansible-playbook teardown.yml` first if necessary
++
+
+[source,sh]
+----
+ansible-playbook site.yml
+----
++
+Your, slowly getting better, `site.yml` should run successfully.
+If not debug, fix, until successful.
++
+TIP: YAML at first appears very fussy about indentation etc but soon this becomes natural.
+Adopt a consistent style as when creating lists for example you have 2 indentation styles to chose from.
+`ansible-playbook <playbook-name> --syntax-check` us useful and `pip3` can also install link:https://github.com/adrienverge/yamllint[`yamllint`]
+
+. Finally `commit` your changes
++
+[source,sh]
+----
+git add --all
+git commit -m "Refactored all vars to group_vars"
+----
++
+.Sample Output
+[source,texinfo]
+----
+[refactor-pass-01 9399a27] Refactored all vars to group_vars
+ 6 files changed, 53 insertions(+), 54 deletions(-)
+ create mode 100644 group_vars/app_servers.yml
+ create mode 100644 group_vars/database_servers.yml
+ create mode 100644 group_vars/load_balancers.yml
+----
++
+
+. Examine your `git` history with `git log`
++
+[source,sh]
+----
+git log
+----
++
+.Sample Output
+[source,texinfo]
+----
+commit 9399a277637e74cc9ccb167daa464d6b813dd552
+Author: tok <tok@example.com>
+Date:   Thu Jul 23 17:58:42 2020 +0000
+
+    Refactored all vars to group_vars
+
+commit a61fb5ce457e88759a8a63cdf4b938c9df73581e
+Author: tok <tok@example.com>
+Date:   Thu Jul 23 17:10:22 2020 +0000
+
+    Refactored and removed main.yml to site.yml
+
+commit 531439bee9f84c1068be761e5c10fa65ad4abb7a
+Author: Tony <tony.g.kay@gmail.com>
+Date:   Tue Jul 21 13:30:19 2020 -0600
+....
+----
++
+*Notice* you also see my own earlier commits in the history prior to your own work
+
+[#templates]
+== Clean Up your Templates
+
+The root directory of your project is a bit cluttered, including several template files.
+
+. Make a `templates` sub-directory
+
++
+[source,sh]
+----
+mkdir templates
+----
+
+. Move all the jinja template files (ending `.j2`)
++
+[source,sh]
+----
+mv *.j2 templates
+----
+
+. All your playbooks now have an incorrect path
+
+
+[TIP]
+====
+`grep` can be an extremely useful command when working with Ansible repos and projects.
+Since the paths you are going to have to change are all related to the `template` module we can quickly find them.
+`grep -A` can be used to show a specified number of lines after the search pattern.
+Try:
+
+
+[source,sh]
+----
+grep -A2 template: provision_*
+----
+
+.Sample Output
+[source,texinfo]
+----
+provision_app_tier.yml:      template:
+provision_app_tier.yml-        src: launch_resource_hub.j2
+provision_app_tier.yml-        dest: /usr/local/bin/launch_resource_hub   
+--
+provision_app_tier.yml:      template:
+provision_app_tier.yml-        src: flask_service.j2
+provision_app_tier.yml-        dest: /etc/systemd/system/{{ flask_app_name }}.service
+--
+provision_database_tier.yml:      template:
+provision_database_tier.yml-        src: pg_hba.conf.j2
+provision_database_tier.yml-        dest: "{{ postgres_10_data_dir }}/pg_hba.conf"
+--
+provision_load_balancer_tier.yml:      template:
+provision_load_balancer_tier.yml-        src: haproxy.cfg.j2
+provision_load_balancer_tier.yml-        dest: /etc/haproxy/haproxy.cfg
+----
+====
+
+. Fix each of the `src:` lines above to include the `templates` sub-directory in the path
+
+. Validate your work by running `ansible-playbook teardown-app.yml` and then `ansible-playbook site.yml`
+
+. Before committing your changes use `git status` to see the changes. `git diff` will show the details of your edits
++
+[source,sh]
+----
+git status
+----
++
+.Sample Output
+[source,texinfo]
+----
+# On branch refactor-pass-01
+# Changes not staged for commit:
+#   (use "git add/rm <file>..." to update what will be committed)
+#   (use "git checkout -- <file>..." to discard changes in working directory)
+#
+#       deleted:    flask_service.j2
+#       deleted:    haproxy.cfg.j2
+#       deleted:    launch_resource_hub.j2
+#       deleted:    pg_hba.conf.j2
+#       modified:   provision_app_tier.yml
+#       modified:   provision_database_tier.yml
+#       modified:   provision_load_balancer_tier.yml
+#
+# Untracked files:
+#   (use "git add <file>..." to include in what will be committed)
+#
+#       templates/
+no changes added to commit (use "git add" and/or "git commit -a")
+----
+
+. Save your changes with `git add` and `git commit`
+
+
++
+[source,sh]
+----
+git add --all
+git commit -am "Cleaned up jinja templates to templates directory"
+----
++
+.Sample Output
+[source,texinfo]
+----
+[refactor-pass-01 7e0d63a] Cleaned up jinja templates to templates directory
+ 7 files changed, 4 insertions(+), 4 deletions(-)
+ rename flask_service.j2 => templates/flask_service.j2 (100%)
+ rename haproxy.cfg.j2 => templates/haproxy.cfg.j2 (100%)
+ rename launch_resource_hub.j2 => templates/launch_resource_hub.j2 (100%)
+ rename pg_hba.conf.j2 => templates/pg_hba.conf.j2 (100%)
+----
+
+. Finally `merge` you changes into your `main` branch
+
+
++
+[source,sh]
+----
+git checkout main
+git merge refactor-pass-01 
+----
++
+.Sample Output
+[source,texinfo]
+----
+Updating 531439b..7e0d63a
+Fast-forward
+ group_vars/app_servers.yml                                 |  26 ++++++++++++
+ group_vars/database_servers.yml                            |  24 +++++++++++
+ group_vars/load_balancers.yml                              |   3 ++
+ main.yml                                                   | 296 ---------------------------------------------------------------------------------------------------------
+ provision_app_tier.yml                                     |  77 +++++++++++++++++++++++++++++++++++
+ provision_database_tier.yml                                |  85 +++++++++++++++++++++++++++++++++++++++
+ provision_load_balancer_tier.yml                           |  81 +++++++++++++++++++++++++++++++++++++
+ site.yml                                                   |   3 ++
+ flask_service.j2 => templates/flask_service.j2             |   0
+ haproxy.cfg.j2 => templates/haproxy.cfg.j2                 |   0
+ launch_resource_hub.j2 => templates/launch_resource_hub.j2 |   0
+ pg_hba.conf.j2 => templates/pg_hba.conf.j2                 |   0
+ 12 files changed, 299 insertions(+), 296 deletions(-)
+ create mode 100644 group_vars/app_servers.yml
+ create mode 100644 group_vars/database_servers.yml
+ create mode 100644 group_vars/load_balancers.yml
+ delete mode 100644 main.yml
+ create mode 100644 provision_app_tier.yml
+ create mode 100644 provision_database_tier.yml
+ create mode 100644 provision_load_balancer_tier.yml
+ create mode 100644 site.yml
+ rename flask_service.j2 => templates/flask_service.j2 (100%)
+ rename haproxy.cfg.j2 => templates/haproxy.cfg.j2 (100%)
+ rename launch_resource_hub.j2 => templates/launch_resource_hub.j2 (100%)
+ rename pg_hba.conf.j2 => templates/pg_hba.conf.j2 (100%)
+----
+
+=== Solution
+
+I've deliberately created a second repo with a solution, to avoid the temptation of just checking out the relevant commit/tag/branch (more on them later). 
+Meanwhile it can be found link:https://github.com/tonykay/solution_ansible_flask_app_loader_all_in_one[here] 
+
+== Next Steps
+
+Congratulations, you know have a cleaner codebase that is more modular and easier to maintain.
+However it is still a bit "clunky" and it would be awkward for another team to _"borrow"_ say your Postgres playbook.
+
