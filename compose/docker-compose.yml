@@ -6,6 +6,7 @@ networks:
 services:
   app1:
     container_name: app1
+    hostname: app1
     image: tonykay/vmlet-rhel-8-ansible
     labels:
       com.envy.env_name: multi
@@ -14,6 +15,7 @@ services:
     privileged: true
   app2:
     container_name: app2
+    hostname: app2
     image: tonykay/vmlet-rhel-8-ansible
     labels:
       com.envy.env_name: multi
@@ -22,6 +24,7 @@ services:
     privileged: true
   appdb:
     container_name: appdb
+    hostname: appdb
     image: tonykay/vmlet-rhel-8-ansible
     labels:
       com.envy.env_name: multi
@@ -30,6 +33,7 @@ services:
     privileged: true
   control:
     container_name: control
+    hostname: control
     privileged: true
     image: tonykay/vmlet-rhel-8-ansible
     labels:
@@ -48,8 +52,11 @@ services:
 
   terminal:
     container_name: terminal
+    hostname: terminal
     privileged: true
     image: quay.io/openshifthomeroom/workshop-terminal:latest
+    volumes:
+      - "./../bind_mounts/ssh:/opt/app-root/src/.ssh:z,rw"
     ports:
       - "10080:10080"
 
@@ -58,6 +65,7 @@ services:
     image: httpd 
     volumes:
       - "./../output/:/usr/local/apache2/htdocs/:z,rw"
+      - "./../index/index.html:/usr/local/apache2/htdocs/index.html:z,rw"
         # - "~/.ansible/collections/ansible_collections/tonykay/envy/playbooks/vars/classroom/index.html://usr/local/apache2/htdocs/index.html:z,ro"
     ports:
       - "80:80"

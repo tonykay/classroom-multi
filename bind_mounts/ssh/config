@@ -1,0 +1,10 @@
+Host *
+  User devops
+  IdentityFile  ~/.ssh/provision_key.pem
+  UserKnownHostsFile /dev/null
+  StrictHostKeyChecking no
+  LogLevel QUIET
+  ControlMaster auto
+  ControlPath /tmp/%h-%p-%r
+  ControlPersist 5m
+
