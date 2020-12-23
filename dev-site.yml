@@ -2,7 +2,7 @@ runtime:
   cache_dir: ./.cache/antora
 
 site:
-  title: Template Tutorial(Dev Mode)
+  title: Ansible Refactoring (Dev Mode)
   url: http://localhost:3000/rhs-build-course/index.html
   start_page: template-tutorial::index.adoc
 
@@ -13,13 +13,13 @@ content:
       start_path: documentation
 asciidoc:
   attributes:
-    title: Template Tutorial(Dev Mode)
+    title: Ansible Refactoring (Dev Mode)
   extensions:
     - ./lib/remote-include-processor.js
     - ./lib/tab-block.js
 ui:
   bundle:
-    url: https://github.com/redhat-scholars/course-ui/releases/download/v0.1.1/ui-bundle.zip
+    url: https://github.com/tonykay/demo-gpte-classroom-ui/blob/main/releases/download/v0.0.1/ui-bundle.zip?raw=true
     snapshot: true
   supplemental_files: ./supplemental-ui
 output:
