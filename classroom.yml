@@ -20,7 +20,7 @@ asciidoc:
 ui:
   bundle:
     url: https://github.com/tonykay/demo-gpte-classroom-ui/blob/main/releases/download/v0.0.1/ui-bundle.zip?raw=true
-    snapshot: true
+      #snapshot: true
   supplemental_files: ./supplemental-ui
 output:
   dir: ./output
