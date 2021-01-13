@@ -1,5 +1,5 @@
 * xref:01-ansible-refactoring-overview.adoc[1. Overview]
-** xref:01-ansible-refactoring-overview.adoc#infrastucture[The Infrastucture]
+** xref:01-ansible-refactoring-overview.adoc#infrastructure[The Infrastructure]
 ** xref:01-ansible-refactoring-overview.adoc#application[The Application]
 
 * xref:02-ansible-refactoring-control-node.adoc[2. Setting up your Control Node]

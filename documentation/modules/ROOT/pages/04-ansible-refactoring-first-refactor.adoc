@@ -2,7 +2,6 @@
 
 
 In our first pass through the project we will just focus on breaking it up into more modular components, breaking apart the variables from the code, and cleaning up the base directory by moving out any files or templates into sub-directories.
-If you are link:https://www.jeffgeerling.com/[Jeff Geerling] and very comfortable with writing *roles* and *collections* then this part can be skipped!
 
 
 .Process
@@ -76,11 +75,10 @@ Linters such as `yamllint`, `ansible-lint`, and `ansible-review` are outside the
 If you are curious to try then install `python3` and the use `pip3` to install `ansible-review`
 [source,sh]
 ----
-sudo yum install python3 -y
-sudo pip3 install ansible-review
+sudo pip3 install ansible-review yamllint
 ----
 
-Output omitted for brevity and *yes* using `sudo` for `pip3` is a bad practice but a useful shortcut for now (use virtualenvs or link to `/usr/local/bin` would be better but a few more steps) 
+Output omitted for brevity and *yes* using `sudo` for `pip3` is a bad practice but a useful shortcut for now (use virtualenvs or `pip3 install --user` and link to `/usr/local/bin` would be better but a few more steps) 
 
 .Try it on your new playbooks
 [source,texinfo]
@@ -218,18 +216,20 @@ ansible-inventory --graph
 [source,texinfo]
 ----
 @all:
-  |--@app_servers:
-  |  |--app1.fe87.internal
-  |  |--app2.fe87.internal
-  |--@database_servers:
-  |  |--appdb1.fe87.internal
-  |--@load_balancers:
-  |  |--frontend1.fe87.internal
+  |--@internal:
+  |  |--@app_servers:
+  |  |  |--app-01
+  |  |  |--app-02
+  |  |--@database_servers:
+  |  |  |--appdb1
+  |  |--@load_balancers:
+  |  |  |--frontend
   |--@ungrouped:
 ----
 +
 .. Copy your playbooks into `group_vars` using the `group` names above postfixed with `.yml`
 +
+
 [source,sh]
 ----
 cp provision_database_tier.yml group_vars/database_servers.yml
@@ -244,6 +244,15 @@ cp provision_load_balancer_tier.yml group_vars/load_balancers.yml
 * Delete *all* non variable lines including `vars:`
 * Fix the indentation, aligning the vars with column 1
 +
+
+[NOTE]
+====
+This is a quick and simple way to ensure you get all the vars accurately across. 
+Basically you are copying the playbooks over, and the stripping everything out other the the vars themselves.
+It is very common practice in ansible to start with a playbook and then refactor into more modular components by copying and cleaning up into a more composed structure. 
+====
++
+
 [TIP]
 ====
 `vim` is extremely good at these types of operations
@@ -516,3 +525,4 @@ Meanwhile it can be found link:https://github.com/tonykay/solution_ansible_flask
 Congratulations, you know have a cleaner codebase that is more modular and easier to maintain.
 However it is still a bit "clunky" and it would be awkward for another team to _"borrow"_ say your Postgres playbook.
 
+The next step will be to move your playbooks, and _some_ of the vars into reusable roles.
