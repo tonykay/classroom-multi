@@ -22,7 +22,7 @@ cleanup ()
 new_dojo_build ()
 {
   cleanup
-  zip -r ./builds/dojo-multitier.zip ./README.adoc ./output ./dojo
+  zip -r ./builds/dojo-multitier.zip ./classroom
 }
 
 new_dojo_build
