@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+
+# Determine script directory even from sym link directories for correct paths
+
+_FULL_PATH=$(cd -P -- "$(dirname -- "$0")" && pwd -P) && SELF_PATH=$SELF_PATH/$(basename -- "$0" | awk '{ print $NF }')
+_DOJO_HOME=$(echo $_FULL_PATH | awk '{ print $1 }') # weirdness with paths, should be able to combine with above
+_NUM_ARGS=$#
+_ACTION=$1
+
+usage ()
+{
+  echo "Usage: dojo COMMAND"
+  echo 
+  echo  A container based local deployer for workshops, labs, and demos
+  echo 
+  echo "Commands:"  
+  echo 
+  echo "up      Start the dojo environment"
+  echo "down    Stop the dojo environment"
+
+  exit 0
+}
+
+process_command_line_arguments ()
+{
+  echo
+  if [ "$_NUM_ARGS" -ne 1 ]; 
+  then
+    usage
+    exit 0
+  fi
+
+  validate_runtime_by_os 
+
+  case "$1" in 
+    up | start )
+      _ACTION=up    
+      run_docker_compose_up
+      ;;
+    down | stop )  
+      _ACTION=down
+      run_docker_compose_down
+      ;;
+    * )  
+      usage
+      ;;
+  esac
+}
+
+validate_runtime_by_os () # For container run-time and installers
+{
+  _PLATFORM=unknown
+  _OS_STRING=$(uname)
+
+  case "$_OS_STRING" in
+    Darwin)
+      _PLATFORM=mac
+      ensure_mac_container_runtime
+      ;;
+    Linux)
+      _PLATFORM=Linux
+      echo Linux Support via podman coming
+      ;;
+    *)
+      echo Platform is unknown
+      echo Assuming run-time is docker
+      ;;
+  esac
+}
+
+#ensure_mac_software_installed ()
+#{
+#  _MACOS_VERSION=$(defaults read loginwindow SystemVersionStampAsString)
+#  echo Mac version "$_MACOS_VERSION"
+#}  
+
+ensure_mac_container_runtime ()
+{
+  # deal with Mac && Docker
+  # echo checking container runtime
+  if [ ! -f /usr/local/bin/docker-compose ]
+  then 
+    # mac_version_installer
+    _DOCKER_DESKTOP_MINIMUM="10.14"
+    _MACOS_VERSION=$(defaults read loginwindow SystemVersionStampAsString)
+    echo docker-compose not installed
+    echo You can install this manually with:
+    echo
+     if [ "$(printf '%s\n' "$_DOCKER_DESKTOP_MINIMUM" "$_MACOS_VERSION" | sort -V | head -n1)" = "$_DOCKER_DESKTOP_MINIMUM" ]; then 
+            echo brew install --cask docker
+     else
+            echo brew cask install docker-toolbox
+     fi
+     exit 1
+  fi
+}
+
+
+run_docker_compose_up ()
+{
+  docker-compose -f ${_DOJO_HOME}/resources/orchestration/docker-compose.yml up -d
+  if [ $? -eq 0 ]
+  then
+    access_message
+  fi
+}
+run_docker_compose_down ()
+{
+  docker-compose -f ${_DOJO_HOME}/resources/orchestration/docker-compose.yml down
+  if [ "$?" -eq 0 ]
+  then
+    echo
+    echo "Environment is removed, 'dojo up' to restart"
+  fi
+}
+
+access_message ()
+{
+  echo
+  echo "You can access your environment at http://localhost"
+  echo
+}
+
+process_command_line_arguments "$1"
+# validate_runtime_by_os 
+# run_docker_compose_deployment 
+		 
