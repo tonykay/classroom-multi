@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 
-# Determine script directory even from sym link directories for correct paths
-
-_FULL_PATH=$(cd -P -- "$(dirname -- "$0")" && pwd -P) && SELF_PATH=$SELF_PATH/$(basename -- "$0" | awk '{ print $NF }')
-_DOJO_HOME=$(echo $_FULL_PATH | awk '{ print $1 }') # weirdness with paths, should be able to combine with above
 _NUM_ARGS=$#
 _ACTION=$1
+
+# Determine script directory even from sym link directories for correct paths
+_FULL_PATH=$(cd -P -- "$(dirname -- "$0")" && pwd -P) && SELF_PATH=$SELF_PATH/$(basename -- "$0" | awk '{ print $NF }')
+_DOJO_HOME=$(echo $_FULL_PATH | awk '{ print $1 }') # weirdness with paths, should be able to combine with above
+
 
 usage ()
 {
@@ -16,7 +17,9 @@ usage ()
   echo "Commands:"  
   echo 
   echo "up      Start the dojo environment"
-  echo "down    Stop the dojo environment"
+  echo "down    Stop AND remove the dojo environment"
+  echo "stop    Stop BUT don't remove the dojo environment" 
+  echo
 
   exit 0
 }
@@ -38,7 +41,6 @@ process_command_line_arguments ()
       run_docker_compose_up
       ;;
     down | stop )  
-      _ACTION=down
       run_docker_compose_down
       ;;
     * )  
@@ -98,7 +100,7 @@ ensure_mac_container_runtime ()
 
 run_docker_compose_up ()
 {
-  docker-compose -f ${_DOJO_HOME}/resources/orchestration/docker-compose.yml up -d
+  docker-compose -f resources/orchestration/docker-compose.yml up -d
   if [ $? -eq 0 ]
   then
     access_message
@@ -106,7 +108,7 @@ run_docker_compose_up ()
 }
 run_docker_compose_down ()
 {
-  docker-compose -f ${_DOJO_HOME}/resources/orchestration/docker-compose.yml down
+  docker-compose -f resources/orchestration/docker-compose.yml "$_ACTION"
   if [ "$?" -eq 0 ]
   then
     echo
@@ -120,6 +122,9 @@ access_message ()
   echo "You can access your environment at http://localhost"
   echo
 }
+
+cd "$_DOJO_HOME"/..
+pwd
 
 process_command_line_arguments "$1"
 # validate_runtime_by_os 
