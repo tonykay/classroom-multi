@@ -100,7 +100,7 @@ ensure_mac_container_runtime ()
 
 run_docker_compose_up ()
 {
-  docker-compose -f resources/orchestration/docker-compose.yml up -d
+  docker-compose -f classroom/resources/orchestration/docker-compose.yml up -d
   if [ $? -eq 0 ]
   then
     access_message
@@ -108,7 +108,7 @@ run_docker_compose_up ()
 }
 run_docker_compose_down ()
 {
-  docker-compose -f resources/orchestration/docker-compose.yml "$_ACTION"
+  docker-compose -f classroom/resources/orchestration/docker-compose.yml "$_ACTION"
   if [ "$?" -eq 0 ]
   then
     echo
