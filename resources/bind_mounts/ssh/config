@@ -1,3 +1,5 @@
+# Default ssh config
+
 Host *
   User devops
   IdentityFile  ~/.ssh/provision_key.pem

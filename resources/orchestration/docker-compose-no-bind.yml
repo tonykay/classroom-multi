@@ -14,6 +14,8 @@ services:
     ports:
       - "22"
     privileged: true
+    environment:
+      - SSH_DIR_SOURCE=https://github.com/tonykay/classroom-multi/raw/main/builds/dojo.tar.gz
     #volumes:
     #  - "../bind_mounts/ssh:/opt/app-root/src/.ssh:z,ro"
     
