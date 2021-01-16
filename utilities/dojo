@@ -16,9 +16,10 @@ usage ()
   echo 
   echo "Commands:"  
   echo 
-  echo "up      Start the dojo environment"
-  echo "down    Stop AND remove the dojo environment"
-  echo "stop    Stop BUT don't remove the dojo environment" 
+  echo "up          Start the dojo environment"
+  echo "no_bind     Start the dojo environment without bind_mounts - dynamic pull"
+  echo "down        Stop AND remove the dojo environment"
+  echo "stop        Stop BUT don't remove the dojo environment" 
   echo
 
   exit 0
@@ -39,6 +40,10 @@ process_command_line_arguments ()
     up | start )
       _ACTION=up    
       run_docker_compose_up
+      ;;
+    no_bind )
+      _ACTION=up    
+      run_docker_compose_no_bind
       ;;
     down | stop )  
       run_docker_compose_down
@@ -101,6 +106,15 @@ ensure_mac_container_runtime ()
 run_docker_compose_up ()
 {
   docker-compose -f classroom/resources/orchestration/docker-compose.yml up -d
+  if [ $? -eq 0 ]
+  then
+    access_message
+  fi
+}
+
+run_docker_compose_no_bind ()
+{
+  docker-compose -f classroom/resources/orchestration/docker-compose-no-bind.yml up -d
   if [ $? -eq 0 ]
   then
     access_message
