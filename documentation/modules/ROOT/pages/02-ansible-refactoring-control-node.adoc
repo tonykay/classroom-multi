@@ -5,8 +5,8 @@
 
 The lab environment consists of four servers and a control node.
 
-image::/images/
--topology.png[role="thumb center" width=80%]
+image::ntier-topology.png[role="thumb center" width=100%]
+
 
 [%header,cols="3,3,2,2,3,5"] 
 |===
