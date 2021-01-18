@@ -23,13 +23,7 @@ new_dojo_build ()
 {
   cleanup
   tar -chzvf ./builds/dojo.tar.gz ./classroom
-
-  #zip -r ./builds/dojo-multitier.zip ./classroom
-
 }
 
 new_dojo_build
-
-#rm ./dojo/builds/dojo-multitier.zip
-#zip -r ./dojo/builds/dojo-multitier.zip ./dojo/README.adoc ./dojo/resources ./dojo/dojo
 

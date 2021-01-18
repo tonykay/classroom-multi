@@ -3,7 +3,7 @@
 [#environment]
 === Your Environment
 
-The lab environment consists of four servers and a control node.
+The lab environment consists of 4 servers and a control node.
 
 image::ntier-topology.png[role="thumb center" width=100%]
 
