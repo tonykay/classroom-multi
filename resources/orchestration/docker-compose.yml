@@ -63,7 +63,7 @@ services:
     hostname: classroom-httpd
     image: quay.io/tonykay/classroom-rhel-8-httpd
     volumes:
-      - "../bind_mounts/content:/var/www/html:z,ro"
+      - "../content:/var/www/html:z,ro"
     privileged: true
     ports:
       - "80:8080"
