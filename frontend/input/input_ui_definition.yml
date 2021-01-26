@@ -1,0 +1,11 @@
+frames: 
+  - name: doc
+    title: Documentation
+    url: http://localhost:8080/agnosticlp-content/1/
+    height: 80%
+    width: 40%
+  - name: terminal
+    title: Terminal
+    url: http://localhost:10080
+    height: 80%
+    width: 60%

@@ -1,0 +1,9 @@
+- hosts: localhost
+  connection: local
+  vars_files:
+    - ../input/input_ui_definition.yml
+  tasks:
+    - name: Create a html template and populate it with variables from input
+      template:
+        src: index.html.j2
+        dest: ../web_app/index.html
